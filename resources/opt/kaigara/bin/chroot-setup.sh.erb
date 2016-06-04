@@ -1,0 +1,22 @@
+#!/bin/bash
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+cp /usr/share/zoneinfo/Europe/Paris /etc/localtime 
+echo 'LANG="en_US.UTF-8"' >  /etc/default/locale
+echo 'Europe/Paris' > /etc/timezone 
+locale-gen en_US.UTF-8
+dpkg-reconfigure -f noninteractive tzdata
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get install -y grub-pc linux-generic-lts-trusty 
+apt-get install -y --reinstall grub-pc
+grub-install /dev/nbd0
+grub-install /dev/nbd0 --recheck
+update-grub
+
+#!! Edit grub.cfg
+
+echo 'root:change' | chpasswd
+
+

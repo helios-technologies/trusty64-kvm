@@ -1,0 +1,48 @@
+#/bin/bash
+<%
+require 'ostruct'
+image = OpenStruct.new
+image.name = 'trusty64'
+image.disk = '/dev/nbd0'
+image.size = '8G'
+image.mnt  = '/vagrant/mnt'
+%>
+
+set -xe
+
+disk="<%= image.disk %>"
+dest="<%= image.mnt %>"
+
+modprobe nbd max_part=8
+
+qemu-nbd -c $disk <%= "#{image.name}.qcow2" %>
+
+parted --script $disk mklabel msdos
+parted --script $disk mkpart primary ext4 1MiB 100MiB
+parted --script $disk mkpart primary linux-swap 100MiB 2GiB
+parted --script $disk mkpart primary ext4 2GiB 100%
+parted --script $disk set 1 boot on
+
+## Boot
+mkfs.ext4 ${disk}p1
+## Swap
+mkswap ${disk}p2
+## Root
+mkfs.ext4 ${disk}p3
+
+mkdir $dest
+mount ${disk}p3 $dest
+
+mkdir $dest/boot
+mount ${disk}p1 $dest/boot
+
+debootstrap trusty $dest
+
+cp /etc/apt/sources.list $dest/etc/apt/
+
+mount --bind /dev $dest/dev
+mount --bind /dev/pts $dest/dev/pts
+mount -t proc proc $dest/proc
+mount -t sysfs sys $dest/sys
+
+echo "System ready for chroot"
